@@ -166,6 +166,11 @@ var StepTime   = 330	//for virtual
 var PauseTime  = 500
 
 var PauseTimeL  = PauseTime.toLong()
+
+var timePreStep = 1L // per calcolo time backstep
+var crashCounter = 0 // per riprovare a muoversi avanti supponendo ostacolo mobile
+var timeBack = -1 // tempo di backstep
+
 "]	 
 	State s0 initial {	    
 	    solve( consult("moves.pl")	 )
@@ -222,6 +227,7 @@ var PauseTimeL  = PauseTime.toLong()
  	State doForwardMove{
  		delayVar PauseTimeL  //Otherwise is too fast, even with remote interaction
  		run itunibo.planner.moveUtils.attemptTomoveAhead(myself, StepTime) //forwards to onestepahead
+		["timePreStep = System.currentTimeMillis()"]
 	} 
 	Transition t0   whenEvent stopAppl -> handleStopAppl
 					whenMsg stepOk     -> handleStepOk   
@@ -241,6 +247,7 @@ var PauseTimeL  = PauseTime.toLong()
     
 	State handleStepOk{
  		run itunibo.planner.moveUtils.updateMapAfterAheadOk(myself)
+		["crashCounter = 0"] // o non viene resettato in caso di ostacolo mobile
 	}
 	Goto executePlannedActions
 	 
