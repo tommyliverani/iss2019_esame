@@ -71,7 +71,7 @@ QActor butlermind context ctxWorkInRoom{
     	
    	State doclear{
   		println("&&&  butlermind doclear")	
-  		forward butlerplanexecutor -m execButlerPlan : execButlerPlan(clearnofood)
+  		forward butlerplanexecutor -m execButlerPlan : execButlerPlan(clear)
   	}
   	Goto s0
 
