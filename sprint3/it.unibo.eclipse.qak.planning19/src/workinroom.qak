@@ -244,15 +244,62 @@ var PauseTimeL  = PauseTime.toLong()
 	}
 	Goto executePlannedActions
 	 
-	/*We could reach this state since the robot moves are not precise enough */
- 	State hadleStepFail{ 
-		println("NEVER HERE!!!")
-		["val ButlerDirection = itunibo.planner.moveUtils.getDirection(myself)"]
-		println("ButlerDirection = $ButlerDirection")
-		//Move a little bit backward
-		forward basicrobot -m robotCmd : robotCmd( s )
-		delay 50
-		forward basicrobot -m robotCmd : robotCmd( h )
+	/* We could reach this state since the robot moves are not precise enough */
+ 	State hadleStepFail{
+ 		if "crashCounter == 0"{
+ 			/* 
+ 		 	*  Cerco di calcolare il tempo di backstep perfetto per evitare successive 
+ 		 	*  collisioni, chiaramente è soggetto al ritardo variabile dovuto alla 
+ 		 	*  computazione e ai messaggi, non va granché bene
+ 		 	*/
+			println("timeBack fatto da noi")
+ 			["timeBack = (System.currentTimeMillis() - timePreStep - 45).toInt()"]
+ 			println("timeBack = $timeBack")
+			
+			/*
+ 			onMsg(stepFail : stepFail(Obs, Time)){
+ 				["timeBack = payloadArg(1).toString().toInt()"]
+ 				println("timeBack col payload")
+ 				println("timeBack = $timeBack")
+ 			}
+ 			*/
+ 		}
+ 		
+ 		["crashCounter++"]
+ 		// backstep senza usare delay che non accetta variabili
+		run itunibo.planner.moveUtils.backToCompensate(myself, timeBack, 0)
+ 		
+ 		if "(crashCounter > 1)"{ // messo in modo da sbattere max 2 volte
+			println("Static obstacle found!")
+			["val ButlerDirection = itunibo.planner.moveUtils.getDirection(myself)"]
+			println("ButlerDirection = $ButlerDirection")
+		
+			println("Updating map with the static obstacle just found")
+			run itunibo.planner.moveUtils.setObstacleOnCurrentDirection(myself)
+			println("New map")
+			run itunibo.planner.moveUtils.showCurrentRobotState()
+		
+			println("Updating plan")
+			solve( retractall( move(_) ))
+			run itunibo.planner.moveUtils.doPlan(myself)
+
+			["crashCounter = 0"]
+		}
+		else{
+			println("Found obstacle, supposedly a moving one")
+			["var timesLeft = 2 - crashCounter"] // modificato per match con lo sbattere max 2 volte
+			println("Trying to move ahead other $timesLeft times")
+			delay 2000 // delay di 2 secondi perché l'eventuale moving obstacle si sposti
+			
+			/*
+			 * Ho bisogno di riporre nel kb l'ultima mossa consumata (per forza una w)
+			 * altrimenti è come se andassimo avanti. Due modi:
+			 * - asserta per rimettere la mossa in cima e farla consumare per prima
+			 * - retractall e poi doPlan, tanto non ho ancora posto la X sulla mappa,
+			 *   il piano sarà ricalcolato uguale
+			 */
+			solve( asserta(move(w)) )
+		}
 	}
 	Goto executePlannedActions
 }	
